@@ -1,0 +1,55 @@
+# Now let's complexify the database in order to have additional work to do later! Not important to understand
+# Educational purpose
+
+# Here I create a binary feature who will be used as target
+# We use the numpy.where function which is equivalent to a if-then-else statement
+# If df['quality'] >= 7 then df['Y']=1, else df['Y']=0
+df['Y'] = np.where(df['quality']>= 7, 1, 0)
+
+# We create as well some binary features of 'fixed acidity' & 'volatile acidity'
+df['fixed_acidity_cat'] = np.where(df['fixed acidity']<= 8, 0, 1)
+df['volatile_acidity_cat'] = np.where(df['volatile acidity']>= 0.4, 0, 1)
+
+# Here I create some duplicates rows: I do a random sample of df and then I concat them at the end of df
+temp = df.sample(n=150, random_state=893717398)
+df = df.append(temp)
+del(temp)
+df.reset_index(drop=True, inplace=True)
+
+# Here I create a new feature pH2 from pH where I had some missing values
+df['pH2'] = np.where(df['pH'].index %15 ==0, np.nan, df['pH'])
+
+# Here I create a new random feature 'acidity_other' from 'fixed acidity' and I create some missing values
+rng = np.random.default_rng(893717398)
+df = df.join(pd.Series(rng.normal(df['fixed acidity'].median(),1,len(df)), name='acidity_other'))
+df['acidity_other'] = np.where(df['acidity_other'].index %2 !=0, np.nan, df['pH'])
+
+#Here it is a function that will automatically create a feature of random dates between a defined interval
+def random_datetimes_or_dates(start, end, out_format='datetime', n=10): 
+
+    '''   
+    unix timestamp is in ns by default. 
+    I divide the unix time value by 10**9 to make it seconds 
+    (or 24*60*60*10**9 to make it days).
+    The corresponding unit variable is passed to 
+    the pd.to_datetime function. 
+    Values for the (divide_by, unit) pair to select is defined by 
+    the out_format parameter.
+    for 1 -> out_format='datetime'
+    for 2 -> out_format=anything else
+    '''
+    (divide_by, unit) = (10**9, 's') if out_format=='datetime' else (24*60*60*10**9, 'D')
+
+    start_u = start.value//divide_by
+    end_u = end.value//divide_by
+
+    return pd.to_datetime(np.random.randint(start_u, end_u, n), unit=unit)
+
+# Now I apply my function in order to create the new feature 'date'
+np.random.seed(893717398)
+d_start = pd.to_datetime('2021-01-01')
+d_end = pd.to_datetime('2021-06-30')
+df['date'] = random_datetimes_or_dates(d_start, d_end, out_format='datetime', n=len(df))
+df['date'] = df['date'].astype(str)
+
+## End of the complexification
